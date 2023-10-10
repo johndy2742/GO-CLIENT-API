@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -16,63 +15,59 @@ type Book struct {
 	Quantity int    `json:"quantity"`
 }
 
+type Response struct {
+	Message string      `json:"message"`
+	Status  string      `json:"status"`
+	Data    interface{} `json:"data"`
+}
+
+func jsonResponse(c *gin.Context, status string, message string, data interface{}) {
+	response := Response{
+		Message: message,
+		Status:  status,
+		Data:    data,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func GetAllBooks(c *gin.Context) {
-	// Replace with the actual localhost API endpoint
+
 	localhostAPIEndpoint := "http://localhost:8080/books"
 
 	// Make a request to the localhost API
 	response, err := http.Get(localhostAPIEndpoint)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to fetch data from localhost API",
-		})
+		jsonResponse(c, "error", "Failed to fetch data from localhost API", nil)
 		return
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to fetch data from localhost API",
-		})
+		jsonResponse(c, "error", "Failed to fetch data from localhost API", nil)
 		return
 	}
 
 	// Read the response body
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to read response from localhost API",
-		})
+		jsonResponse(c, "error", "Failed to read response from localhost API", nil)
 		return
 	}
 
 	// Parse the data as JSON array
 	var books []Book
-	if err := json.Unmarshal([]byte(body), &books); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to unmarshal data from localhost API",
-		})
+	if err := json.Unmarshal(body, &books); err != nil {
+		jsonResponse(c, "error", "Failed to unmarshal data from localhost API", nil)
 		return
 	}
 
 	// Serve the data from the localhost API through your API
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Books retrieved successfully",
-		"data":    books,
-	})
+	jsonResponse(c, "success", "Books retrieved successfully", books)
 }
 
 func main() {
 	router := gin.Default()
-
-	// Define the route for accessing the localhost API
 	router.GET("/books", GetAllBooks)
-
-	fmt.Println("Server running at :8081")
 	router.Run("localhost:8081")
 }
